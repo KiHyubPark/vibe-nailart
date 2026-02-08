@@ -27,7 +27,7 @@ export default function Home() {
         title="Create YouTube Thumbnails with AI"
         subtitle="Just enter your idea, and get click-worthy thumbnails instantly"
         ctaLabel="Get Started"
-        ctaHref="#get-started"
+        ctaHref="/auth"
         overlayGradient="linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.2) 100%)"
       >
         <NailartLogo />
