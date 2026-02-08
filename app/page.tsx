@@ -1,4 +1,7 @@
+'use client';
+
 import { AetherHero } from '@/components/main/hero';
+import { useAuth } from '@/contexts/AuthContext';
 
 function NailartLogo() {
   return (
@@ -21,13 +24,17 @@ function NailartLogo() {
 }
 
 export default function Home() {
+  const { user, isLoading } = useAuth();
+
+  const isLoggedIn = !isLoading && !!user;
+
   return (
     <main>
       <AetherHero
         title="Create YouTube Thumbnails with AI"
         subtitle="Just enter your idea, and get click-worthy thumbnails instantly"
-        ctaLabel="Get Started"
-        ctaHref="/auth"
+        ctaLabel={isLoggedIn ? 'Go to Dashboard' : 'Get Started'}
+        ctaHref={isLoggedIn ? '/dashboard' : '/auth'}
         overlayGradient="linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.2) 100%)"
       >
         <NailartLogo />
