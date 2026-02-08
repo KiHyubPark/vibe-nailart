@@ -1,11 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
 export type NavbarProps = {
-  logoSrc?: string;
   brandName?: string;
 };
 
@@ -16,25 +14,18 @@ const navLinks = [
 ];
 
 export default function Navbar({
-  logoSrc = '/nailart_log.png',
   brandName = 'Nailart AI',
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-transparent">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <div className="w-full flex items-center justify-between">
         {/* Left: Logo + Brand */}
         <Link href="/" className="flex items-center gap-2.5 no-underline">
-          <Image
-            src={logoSrc}
-            alt={`${brandName} Logo`}
-            width={36}
-            height={36}
-            className="rounded-lg"
-          />
           <span
-            className="text-xl font-bold bg-gradient-to-r from-[#FF6B6B] via-[#FF8E53] to-[#FFD93D] bg-clip-text text-transparent"
+            className="text-2xl bg-gradient-to-r from-[#FF6B6B] via-[#FF8E53] to-[#FFD93D] bg-clip-text text-transparent"
+            style={{ fontFamily: 'var(--font-indie-flower), cursive' }}
           >
             {brandName}
           </span>

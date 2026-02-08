@@ -20,8 +20,8 @@ const indieFlower = Indie_Flower({
 });
 
 export const metadata: Metadata = {
-  title: "Nailart AI - AI 유튜브 썸네일 생성기",
-  description: "AI가 클릭을 부르는 유튜브 썸네일을 자동으로 생성합니다. 디자인 경험 없이도 전문가 수준의 썸네일을 만들어보세요.",
+  title: "Nailart AI - AI YouTube Thumbnail Generator",
+  description: "Create click-worthy YouTube thumbnails with AI. No design experience needed.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${indieFlower.variable} antialiased`}
       >

@@ -287,9 +287,9 @@ export default function AetherHero({
             style={{
               margin: 0,
               fontSize: 'clamp(2.2rem, 6vw, 4.5rem)',
-              lineHeight: 1.04,
-              letterSpacing: '-0.02em',
-              fontWeight: 700,
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-indie-flower), cursive',
+              fontWeight: 400,
               textShadow: '0 6px 36px rgba(0,0,0,0.45)',
             }}
           >
@@ -299,9 +299,10 @@ export default function AetherHero({
           {subtitle ? (
             <p
               style={{
-                marginTop: '1rem',
-                fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+                marginTop: '1.5rem',
+                fontSize: 'clamp(1.1rem, 2vw, 1.4rem)',
                 lineHeight: 1.6,
+                fontFamily: 'var(--font-indie-flower), cursive',
                 opacity: 0.9,
                 textShadow: '0 4px 24px rgba(0,0,0,0.35)',
                 maxWidth: 900,
