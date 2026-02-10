@@ -201,8 +201,22 @@ const toolsList = [
   { id: 'thinkLonger', name: '상세하게 분석', shortName: 'Detailed', icon: LightbulbIcon },
 ];
 
+// --- Spinner Icon ---
+const SpinnerIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" {...props}>
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.25" />
+    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 // --- PromptArea Component ---
-export default function PromptArea() {
+interface PromptAreaProps {
+  onGenerated?: (result: { imageUrl: string; text?: string; thumbnailId?: string; prompt?: string }) => void;
+  isGenerating: boolean;
+  setIsGenerating: (v: boolean) => void;
+}
+
+export default function PromptArea({ onGenerated, isGenerating, setIsGenerating }: PromptAreaProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [value, setValue] = React.useState('');
@@ -210,6 +224,7 @@ export default function PromptArea() {
   const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -248,11 +263,48 @@ export default function PromptArea() {
     }
   };
 
-  const handleSubmit = () => {
-    if (!value.trim() && !imagePreview) return;
-    // TODO: Submit logic
-    setValue('');
-    setImagePreview(null);
+  const handleSubmit = async () => {
+    if ((!value.trim() && !imagePreview) || isGenerating) return;
+    setError(null);
+    setIsGenerating(true);
+
+    try {
+      const body: { prompt: string; imageBase64?: string; imageMimeType?: string } = {
+        prompt: value.trim(),
+      };
+
+      // 첨부 이미지가 있으면 base64 데이터 추출 (data:image/png;base64,xxx → xxx)
+      if (imagePreview) {
+        const [meta, data] = imagePreview.split(',');
+        const mimeMatch = meta.match(/data:(image\/[^;]+);/);
+        if (mimeMatch && data) {
+          body.imageBase64 = data;
+          body.imageMimeType = mimeMatch[1];
+        }
+      }
+
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setError(result.error || '이미지 생성에 실패했습니다.');
+        return;
+      }
+
+      const submittedPrompt = value.trim();
+      setValue('');
+      setImagePreview(null);
+      onGenerated?.({ imageUrl: result.imageUrl, text: result.text, thumbnailId: result.thumbnailId, prompt: submittedPrompt });
+    } catch {
+      setError('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -268,18 +320,32 @@ export default function PromptArea() {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Error message */}
+      {error && (
+        <div className="mb-3 px-4 py-2.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400 cursor-pointer">
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Outer wrapper: overflow-hidden clips the rotating gradient, padding creates the border area */}
       <div className="relative rounded-[28px] overflow-hidden shadow-lg" style={{ padding: '2px' }}>
         <BorderBeam
-          duration={6}
-          colorFrom="#FF6B6B"
-          colorTo="#FF8E53"
+          duration={isGenerating ? 3 : 6}
+          colorFrom={isGenerating ? '#818CF8' : '#FF6B6B'}
+          colorTo={isGenerating ? '#C084FC' : '#FF8E53'}
         />
         <BorderBeam
-          duration={6}
-          delay={3}
-          colorFrom="#FF8E53"
-          colorTo="#FFD93D"
+          duration={isGenerating ? 3 : 6}
+          delay={isGenerating ? 1.5 : 3}
+          colorFrom={isGenerating ? '#C084FC' : '#FF8E53'}
+          colorTo={isGenerating ? '#F0ABFC' : '#FFD93D'}
         />
         {/* Inner content with solid bg covers center, leaving only 2px border visible */}
         <div className="relative flex flex-col rounded-[26px] bg-[#1e1e1e] p-2 cursor-text">
@@ -331,8 +397,9 @@ export default function PromptArea() {
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="어떤 썸네일을 만들까요?"
-          className="w-full resize-none border-0 bg-transparent p-3 text-white placeholder:text-white/30 focus:ring-0 focus-visible:outline-none min-h-12"
+          disabled={isGenerating}
+          placeholder={isGenerating ? '썸네일 생성 중...' : '어떤 썸네일을 만들까요?'}
+          className="w-full resize-none border-0 bg-transparent p-3 text-white placeholder:text-white/30 focus:ring-0 focus-visible:outline-none min-h-24 disabled:opacity-50"
         />
 
         {/* Bottom toolbar */}
@@ -416,20 +483,24 @@ export default function PromptArea() {
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={!hasValue}
+                      disabled={!hasValue || isGenerating}
                       className="flex h-8 w-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none cursor-pointer disabled:pointer-events-none disabled:opacity-30"
                       style={
-                        hasValue
+                        hasValue && !isGenerating
                           ? { background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #FFD93D 100%)' }
                           : { background: 'rgba(255,255,255,0.1)' }
                       }
                     >
-                      <SendIcon className="h-5 w-5 text-white" />
-                      <span className="sr-only">보내기</span>
+                      {isGenerating ? (
+                        <SpinnerIcon className="h-5 w-5 text-white animate-spin" />
+                      ) : (
+                        <SendIcon className="h-5 w-5 text-white" />
+                      )}
+                      <span className="sr-only">{isGenerating ? '생성 중...' : '보내기'}</span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" showArrow>
-                    <p>보내기</p>
+                    <p>{isGenerating ? '생성 중...' : '보내기'}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>

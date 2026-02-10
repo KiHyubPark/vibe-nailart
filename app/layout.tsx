@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Indie_Flower } from "next/font/google";
+import { Geist, Geist_Mono, Indie_Flower, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/main/navbar";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -20,6 +20,12 @@ const indieFlower = Indie_Flower({
   subsets: ["latin"],
 });
 
+const notoSansKR = Noto_Sans_KR({
+  variable: "--font-noto-sans-kr",
+  weight: ["700", "900"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Nailart AI - AI YouTube Thumbnail Generator",
   description: "Create click-worthy YouTube thumbnails with AI. No design experience needed.",
@@ -33,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${indieFlower.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${indieFlower.variable} ${notoSansKR.variable} antialiased`}
       >
         <AuthProvider>
           <Navbar />
