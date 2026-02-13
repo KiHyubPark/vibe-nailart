@@ -60,11 +60,6 @@ export default function ThumbnailArea({ generatedImage, isGenerating }: Thumbnai
               </a>
             </div>
           </div>
-          {generatedImage.text && (
-            <div className="mt-3 px-1">
-              <p className="text-white/50 text-sm">{generatedImage.text}</p>
-            </div>
-          )}
         </div>
       ) : null}
     </div>

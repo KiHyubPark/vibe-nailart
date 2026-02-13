@@ -15,6 +15,11 @@ export default function SidebarItem({ item, isSelected, onClick }: SidebarItemPr
 
   return (
     <button
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/x-thumbnail-url', item.imageUrl);
+        e.dataTransfer.effectAllowed = 'copy';
+      }}
       onClick={onClick}
       className="w-full text-left rounded-xl p-2 transition-colors cursor-pointer group"
       style={{
@@ -40,13 +45,8 @@ export default function SidebarItem({ item, isSelected, onClick }: SidebarItemPr
         />
       </div>
 
-      {/* Prompt text */}
-      <p className="mt-1.5 text-xs text-white/50 truncate px-0.5">
-        {item.prompt || 'No prompt'}
-      </p>
-
       {/* Date */}
-      <p className="text-[10px] text-white/30 px-0.5">
+      <p className="mt-1.5 text-[10px] text-white/30 px-0.5">
         {timeLabel}
       </p>
     </button>

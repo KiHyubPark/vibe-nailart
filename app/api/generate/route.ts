@@ -16,10 +16,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 요청 파싱
-    const { prompt, imageBase64, imageMimeType } = await request.json() as {
+    const { prompt, images } = await request.json() as {
       prompt: string;
-      imageBase64?: string;
-      imageMimeType?: string;
+      images?: { base64: string; mimeType: string }[];
     };
 
     if (!prompt?.trim()) {
@@ -29,31 +28,18 @@ export async function POST(request: NextRequest) {
     // 3. Gemini API 호출
     const fullPrompt = `${THUMBNAIL_SYSTEM_PROMPT}\n\nUser request: ${prompt}`;
 
-    const contents: Array<{ role: string; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> = [];
+    type Part = { text?: string; inlineData?: { mimeType: string; data: string } };
+    const parts: Part[] = [{ text: fullPrompt }];
 
-    if (imageBase64 && imageMimeType) {
-      // 이미지 편집 모드
-      contents.push({
-        role: 'user',
-        parts: [
-          { text: fullPrompt },
-          {
-            inlineData: {
-              mimeType: imageMimeType,
-              data: imageBase64,
-            },
-          },
-        ],
-      });
-    } else {
-      // 텍스트 → 이미지 생성 모드
-      contents.push({
-        role: 'user',
-        parts: [
-          { text: fullPrompt },
-        ],
-      });
+    if (images && images.length > 0) {
+      for (const img of images.slice(0, 3)) {
+        parts.push({
+          inlineData: { mimeType: img.mimeType, data: img.base64 },
+        });
+      }
     }
+
+    const contents = [{ role: 'user', parts }];
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -67,15 +53,15 @@ export async function POST(request: NextRequest) {
     });
 
     // 4. 응답에서 이미지 추출
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (!parts) {
+    const responseParts = response.candidates?.[0]?.content?.parts;
+    if (!responseParts) {
       return NextResponse.json({ error: '이미지 생성에 실패했습니다.' }, { status: 500 });
     }
 
-    const imagePart = parts.find(
+    const imagePart = responseParts.find(
       (part: { inlineData?: { mimeType?: string } }) => part.inlineData?.mimeType?.startsWith('image/')
     );
-    const textPart = parts.find(
+    const textPart = responseParts.find(
       (part: { text?: string }) => part.text
     );
 

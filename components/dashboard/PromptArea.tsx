@@ -220,11 +220,63 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [value, setValue] = React.useState('');
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = React.useState<string[]>([]);
   const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
+  const [dialogImage, setDialogImage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const MAX_IMAGES = 3;
+
+  const addImagePreview = (dataUrl: string) => {
+    setImagePreviews((prev) => (prev.length < MAX_IMAGES ? [...prev, dataUrl] : prev));
+  };
+
+  const processFile = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => addImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    // 파일 드롭
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+      return;
+    }
+
+    // 사이드바 이미지 URL 드롭
+    const thumbnailUrl = e.dataTransfer.getData('text/x-thumbnail-url');
+    if (thumbnailUrl) {
+      fetch(thumbnailUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => addImagePreview(reader.result as string);
+          reader.readAsDataURL(blob);
+        })
+        .catch((err) => console.error('Failed to load dropped image:', err));
+    }
+  };
 
   React.useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -245,43 +297,34 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) processFile(file);
     event.target.value = '';
   };
 
-  const handleRemoveImage = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleRemoveImage = (e: React.MouseEvent<HTMLButtonElement>, index: number) => {
     e.stopPropagation();
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
-    if ((!value.trim() && !imagePreview) || isGenerating) return;
+    if ((!value.trim() && imagePreviews.length === 0) || isGenerating) return;
     setError(null);
     setIsGenerating(true);
 
     try {
-      const body: { prompt: string; imageBase64?: string; imageMimeType?: string } = {
-        prompt: value.trim(),
-      };
-
-      // 첨부 이미지가 있으면 base64 데이터 추출 (data:image/png;base64,xxx → xxx)
-      if (imagePreview) {
-        const [meta, data] = imagePreview.split(',');
+      const images: { base64: string; mimeType: string }[] = [];
+      for (const preview of imagePreviews) {
+        const [meta, data] = preview.split(',');
         const mimeMatch = meta.match(/data:(image\/[^;]+);/);
         if (mimeMatch && data) {
-          body.imageBase64 = data;
-          body.imageMimeType = mimeMatch[1];
+          images.push({ base64: data, mimeType: mimeMatch[1] });
         }
       }
+
+      const body: { prompt: string; images?: { base64: string; mimeType: string }[] } = {
+        prompt: value.trim(),
+      };
+      if (images.length > 0) body.images = images;
 
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -298,7 +341,7 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
 
       const submittedPrompt = value.trim();
       setValue('');
-      setImagePreview(null);
+      setImagePreviews([]);
       onGenerated?.({ imageUrl: result.imageUrl, text: result.text, thumbnailId: result.thumbnailId, prompt: submittedPrompt });
     } catch {
       setError('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
@@ -314,7 +357,7 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
     }
   };
 
-  const hasValue = value.trim().length > 0 || !!imagePreview;
+  const hasValue = value.trim().length > 0 || imagePreviews.length > 0;
   const activeTool = selectedTool ? toolsList.find((t) => t.id === selectedTool) : null;
   const ActiveToolIcon = activeTool?.icon;
 
@@ -348,7 +391,13 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
           colorTo={isGenerating ? '#F0ABFC' : '#FFD93D'}
         />
         {/* Inner content with solid bg covers center, leaving only 2px border visible */}
-        <div className="relative flex flex-col rounded-[26px] bg-[#1e1e1e] p-2 cursor-text">
+        <div
+          className="relative flex flex-col rounded-[26px] bg-[#1e1e1e] p-2 cursor-text"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={isDragging ? { outline: '2px dashed rgba(255,142,83,0.5)', outlineOffset: '-2px' } : undefined}
+        >
         <input
           type="file"
           ref={fileInputRef}
@@ -357,36 +406,42 @@ export default function PromptArea({ onGenerated, isGenerating, setIsGenerating 
           accept="image/*"
         />
 
-        {/* Image preview */}
-        {imagePreview && (
-          <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-            <div className="relative mb-1 w-fit rounded-[1rem] px-1 pt-1">
-              <button
-                type="button"
-                className="transition-transform"
-                onClick={() => setIsImageDialogOpen(true)}
-              >
-                <img
-                  src={imagePreview}
-                  alt="Image preview"
-                  className="h-14 w-14 rounded-[1rem] object-cover"
-                />
-              </button>
-              <button
-                onClick={handleRemoveImage}
-                className="absolute right-2 top-2 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80 cursor-pointer"
-                aria-label="Remove image"
-              >
-                <XIcon className="h-3 w-3" />
-              </button>
+        {/* Image previews */}
+        {imagePreviews.length > 0 && (
+          <Dialog open={!!dialogImage} onOpenChange={(open) => { if (!open) setDialogImage(null); }}>
+            <div className="flex gap-2 mb-1 px-1 pt-1 flex-wrap">
+              {imagePreviews.map((src, i) => (
+                <div key={i} className="relative">
+                  <button
+                    type="button"
+                    className="transition-transform"
+                    onClick={() => setDialogImage(src)}
+                  >
+                    <img
+                      src={src}
+                      alt={`Image preview ${i + 1}`}
+                      className="h-14 w-14 rounded-[1rem] object-cover"
+                    />
+                  </button>
+                  <button
+                    onClick={(e) => handleRemoveImage(e, i)}
+                    className="absolute -right-1 -top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80 cursor-pointer"
+                    aria-label="Remove image"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-            <DialogContent>
-              <img
-                src={imagePreview}
-                alt="Full size preview"
-                className="w-full max-h-[95vh] object-contain rounded-[24px]"
-              />
-            </DialogContent>
+            {dialogImage && (
+              <DialogContent>
+                <img
+                  src={dialogImage}
+                  alt="Full size preview"
+                  className="w-full max-h-[95vh] object-contain rounded-[24px]"
+                />
+              </DialogContent>
+            )}
           </Dialog>
         )}
 

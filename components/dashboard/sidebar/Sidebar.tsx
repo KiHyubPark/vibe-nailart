@@ -21,8 +21,8 @@ export default function Sidebar({
       className="fixed left-0 top-0 h-screen z-40 flex flex-col rounded-r-2xl"
       style={{
         width: 288,
-        background: 'rgba(28, 28, 28, 0.97)',
-        backdropFilter: 'blur(20px)',
+        background: 'rgba(20, 20, 20, 0.8)',
+        backdropFilter: 'blur(24px)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '4px 0 32px rgba(0,0,0,0.5)',
       }}
