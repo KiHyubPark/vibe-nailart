@@ -2,6 +2,8 @@
 
 AI를 활용한 유튜브 썸네일 자동 생성 서비스입니다.
 
+> 참고 영상: [https://www.youtube.com/watch?v=mhVgh640FUw](https://www.youtube.com/watch?v=mhVgh640FUw)
+
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
@@ -59,3 +61,4 @@ contexts/
 - **users**: 사용자 프로필 (auth.users 연동)
 - **thumbnails**: 썸네일 데이터 (prompt, image_path, status)
 - **Storage bucket**: `image` (사용자별 폴더 격리)
+
