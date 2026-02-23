@@ -66,7 +66,7 @@ export default function AuthPage() {
         <div className="w-full max-w-2xl flex items-center justify-center">
           <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
             <iframe
-              src="https://www.youtube.com/embed/mhVgh640FUw?autoplay=0&rel=0"
+              src="https://www.youtube.com/embed/J1F8zH_QCt8?autoplay=0&rel=0"
               title="Nailart AI Demo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
